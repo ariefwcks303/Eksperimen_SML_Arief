@@ -2,9 +2,9 @@ import os
 import pandas as pd
 import mlflow
 import dagshub
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import joblib
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
@@ -13,13 +13,13 @@ def main():
     # ==========================================
     # 1. INISIALISASI SAMBUNGAN DAGSHUB
     # ==========================================
-    print("🌐 Menyambungkan ke remote tracker DagsHub (Mode Tuning)...")
+    print("🌐 Menyambungkan ke remote tracker DagsHub (Mode Advanced)...")
     dagshub.init(repo_owner="ariefwcks303", repo_name="Eksperimen_SML_Arief", mlflow=True)
     
     # Menamai eksperimen Advance di server DagsHub
     mlflow.set_experiment("Student_Placement_Advance")
     
-    # Read Dataset dari dalam folder yang sama
+    # Membaca dataset yang berada di folder yang sama
     df = pd.read_csv("student_dataset_clean.csv")
     X = df.drop(columns=['target'])
     y = df['target']
@@ -32,7 +32,6 @@ def main():
     print("⏳ Menjalankan Hyperparameter Tuning (GridSearch)...")
     rf = RandomForestClassifier(random_state=42)
     
-    # Kombinasi parameter yang akan diuji
     param_grid = {
         'n_estimators': [50, 100],
         'max_depth': [5, 10, None]
@@ -50,41 +49,36 @@ def main():
     print(f"📊 Hasil Akhir -> Accuracy: {acc:.4f} | F1-Score: {f1:.4f}")
     
     # ==========================================
-    # 3. MANUAL LOGGING (KRITERIA ADVANCED)
+    # 3. MANUAL LOGGING (KRITERIA ADVANCED DICODING)
     # ==========================================
     with mlflow.start_run(run_name="Random_Forest_Manual_Tuning"):
-        print("📝 Melakukan manual logging parameters & metrics ke DagsHub...")
+        print("📝 Melakukan logging parameters, metrics & artifacts ke DagsHub...")
         
-        # A. Log Parameter Terbaik secara manual
+        # A. Log Parameter Terbaik hasil GridSearch
         mlflow.log_params(grid_search.best_params_)
         
-        # B. Log Metrik Evaluasi secara manual
+        # B. Log Metrik Evaluasi Utama
         mlflow.log_metric("accuracy", acc)
         mlflow.log_metric("f1_score", f1)
         
-        # C. Artefak 1: Membuat & Menyimpan Plot Confusion Matrix
-        print("🖼️ Membuat visualisasi Confusion Matrix...")
+        # C. Artefak 1: Simpan Model Biner (.pkl) secara Lokal lalu Unggah
+        model_file = "best_model.pkl"
+        joblib.dump(best_model, model_file)
+        mlflow.log_artifact(model_file)
+        
+        # D. Artefak 2: Simpan Plot Visualisasi Confusion Matrix lalu Unggah
         cm = confusion_matrix(y_test, y_pred)
         plt.figure(figsize=(5,4))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Not Placed', 'Placed'], yticklabels=['Not Placed', 'Placed'])
-        plt.title('Confusion Matrix Final')
+        plt.title('Confusion Matrix Advanced Model')
         plt.ylabel('Actual')
         plt.xlabel('Predicted')
         
-        plot_path = "confusion_matrix.png"
-        plt.savefig(plot_path)
+        plot_file = "confusion_matrix.png"
+        plt.savefig(plot_file)
         plt.close()
         
-        # Unggah plot ke DagsHub via MLflow
-        mlflow.log_artifact(plot_path, artifact_path="plots")
-        
-        # D. Artefak 2: Menyimpan File Model Biner (.pkl)
-        print("💾 Menyimpan model biner lokal...")
-        model_file = "best_model.pkl"
-        joblib.dump(best_model, model_file)
-        
-        # Unggah model ke DagsHub via MLflow
-        mlflow.log_artifact(model_file, artifact_path="models")
+        mlflow.log_artifact(plot_file)
         
         print("🚀 Berhasil! Semua data dan 2 jenis artefak telah terunggah ke DagsHub.")
 
