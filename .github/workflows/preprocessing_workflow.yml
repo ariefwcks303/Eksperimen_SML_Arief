@@ -1,0 +1,35 @@
+name: Preprocessing Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-preprocessing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas scikit-learn
+
+      - name: Run preprocessing script
+        run: |
+          python preprocessing/automate_Arief-Wicaksono.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # Hanya commit file yang berubah
+          git add preprocessing/student_dataset_clean.csv
+          # Gunakan 'git diff' untuk cek apakah ada perubahan sebelum commit
+          git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update dataset hasil preprocessing via GH Actions" && git push)
